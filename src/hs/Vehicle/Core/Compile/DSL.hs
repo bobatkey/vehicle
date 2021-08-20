@@ -14,6 +14,9 @@ makeTypeAnn :: CheckedExpr -> CheckedAnn
 makeTypeAnn t = RecAnn t mempty
 
 -- TODO think whether we need to recurse in the case of an implicit binder
+-- TODO the provided type might not be in beta-normal form, so we'd have to reduce it
+-- TODO the provided type might contain defined identifiers, which need to be expanded
+-- TODO (alternative) make sure this is only called on types in beta-normal form
 getFunResultType :: CheckedExpr -> CheckedExpr
 getFunResultType (Pi _ann _binder res) = res
 getFunResultType t = developerError $ "Expecting a Pi type. Found" <+> pretty t <> "."
@@ -63,7 +66,8 @@ con b t = Builtin (makeTypeAnn t) b
 
 infixl 4 `app`
 app :: CheckedExpr -> CheckedExpr -> CheckedExpr
-app fun arg = App (makeTypeAnn (getFunResultType (getType fun))) fun (Arg mempty Explicit arg)
+app fun arg = App (makeTypeAnn (arg `substInto` getFunResultType (getType fun))) fun (Arg mempty Explicit arg)
+-- TODO: reduce the substituted type to WHNF
 
 hole :: Symbol -> CheckedExpr
 hole = Hole mempty
